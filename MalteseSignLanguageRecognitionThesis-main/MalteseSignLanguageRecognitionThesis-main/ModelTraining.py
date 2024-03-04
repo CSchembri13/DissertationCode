@@ -10,10 +10,10 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 from tensorflow.keras.callbacks import TensorBoard
 
-print("Hello")
+
 
 # Path for exported data, numpy arrays
-DATA_PATH = os.path.join('largedata') 
+DATA_PATH = os.path.join('MalteseSignLanguageRecognitionThesis-main\largedata')
 
 # Actions that we try to detect  actions = np.array(['Familja', 'Missier', 'Bieb'])
 actions = np.array(['Account','Flus', 'Missier', 'Passport','ThumbsUp'])
@@ -103,18 +103,5 @@ print(report)
 print("Accuracy")
 print(accuracy)
 
-#predicted = model.predict(X_test)
-#report = classification_report(y_test, predicted)
-#print(report)
-#y_test_arg = np.argmax(y_test,axis=1)
-#Y_pred = np.argmax(model.predict(X_test),axis=1)
-
-#res = model.predict(X_test)
-#print(actions[np.argmax(res[4])])
-#print(actions[np.argmax(y_test[4])])
 
 model.save('model1.h5')
-
-#print('Confusion Matrix') # FIX https://datascience.stackexchange.com/questions/93751/valueerror-classification-metrics-cant-handle-a-mix-of-multilabel-indicator-an
-#print(confusion_matrix(y_test_arg, Y_pred))
-#print (classification_report(y_test_arg, Y_pred))
