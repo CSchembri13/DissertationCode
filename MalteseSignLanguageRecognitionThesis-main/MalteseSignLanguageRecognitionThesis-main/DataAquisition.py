@@ -16,12 +16,11 @@ from scipy import stats
 
 # Path for exported data, numpy arrays
 #DATA_PATH = os.path.join('MP_Data') 
-DATA_PATH = os.path.join('largedata') 
+DATA_PATH = os.path.join('MalteseSignLanguageRecognitionThesis-main\largedata') 
 
-# Actions that we try to detect  actions = np.array(['Familja', 'Missier', 'Bieb'])
-#actions = np.array(['Dar', 'Missier', 'Passport'])
-actions = np.array(['ThumbsUp'])
-
+# Actions that we try to detect  actions = np.array(['Familja', 'Missier', 'Bieb'])q
+actions = np.array(['Teddy Bear'])
+# actions = np.array(['ThumbsDown'])
 
 # Thirty videos worth of data
 no_sequences = 30
@@ -88,7 +87,7 @@ with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=
     # NEW LOOP
     # Loop through actions
     for action in actions:
-        if action == 'ThumbsUp':
+        if action == 'Teddy Bear':
 
             # Loop through sequences aka videos
             for sequence in range(start_folder, start_folder+no_sequences):

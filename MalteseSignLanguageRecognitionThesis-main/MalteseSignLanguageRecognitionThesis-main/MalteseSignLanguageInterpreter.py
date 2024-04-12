@@ -63,17 +63,15 @@ def extract_keypoints(results):
     return np.concatenate([pose, face, lh, rh])
 
 # Path for exported data, numpy arrays
-DATA_PATH = os.path.join('largedata') 
+DATA_PATH = os.path.join('MalteseSignLanguageRecognitionThesis-main\largedata')
 #DATA_PATH = os.path.join('MP_Data') 
 
 # Actions that we try to detect  actions = np.array(['Familja', 'Missier', 'Bieb'])
 #actions = np.array(['Account','Flus','Missier', 'Dar', 'Passport', 'Pin'])
-#actions = np.array(['Account','Dar','Flus', 'Missier', 'Passport'])
+# actions = np.array(['Account','Dar','Flus', 'Missier', 'Passport'])
 
-#actions = np.array(['Dar', 'Missier', 'Passport'])
-actions = np.array(['Account','Flus', 'Missier', 'Passport','ThumbsUp'])
-
-
+# actions = np.array(['Dar', 'Missier', 'Passport'])
+actions = np.array(['Kont', 'Dar', 'Flus', 'Missier', 'Passaport'])
 
 # Thirty videos worth of data
 no_sequences = 30
