@@ -4,13 +4,15 @@ import os
 from matplotlib import pyplot as plt
 import time
 import mediapipe as mp
+from PIL import Image, ImageDraw, ImageFont
 
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.utils import to_categorical
 
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
+from tensorflow.keras.layers import LSTM, Dense, Conv1D, MaxPooling1D, Flatten, SimpleRNN
 from tensorflow.keras.callbacks import TensorBoard
+from sklearn.metrics import classification_report, multilabel_confusion_matrix, accuracy_score
 
 from scipy import stats
 
@@ -53,8 +55,6 @@ def draw_styled_landmarks(image, results):
                              mp_drawing.DrawingSpec(color=(245,66,230), thickness=2, circle_radius=2)
                              ) 
 
-
-    
 def extract_keypoints(results):
     pose = np.array([[res.x, res.y, res.z, res.visibility] for res in results.pose_landmarks.landmark]).flatten() if results.pose_landmarks else np.zeros(33*4)
     face = np.array([[res.x, res.y, res.z] for res in results.face_landmarks.landmark]).flatten() if results.face_landmarks else np.zeros(468*3)
@@ -62,16 +62,9 @@ def extract_keypoints(results):
     rh = np.array([[res.x, res.y, res.z] for res in results.right_hand_landmarks.landmark]).flatten() if results.right_hand_landmarks else np.zeros(21*3)
     return np.concatenate([pose, face, lh, rh])
 
-# Path for exported data, numpy arrays
 DATA_PATH = os.path.join('MalteseSignLanguageRecognitionThesis-main\largedata')
-#DATA_PATH = os.path.join('MP_Data') 
 
-# Actions that we try to detect  actions = np.array(['Familja', 'Missier', 'Bieb'])
-#actions = np.array(['Account','Flus','Missier', 'Dar', 'Passport', 'Pin'])
-# actions = np.array(['Account','Dar','Flus', 'Missier', 'Passport'])
-
-# actions = np.array(['Dar', 'Missier', 'Passport'])
-actions = np.array(['Kont', 'Dar', 'Flus', 'Missier', 'Passaport'])
+actions = np.array(['Kont', 'Dar', 'Flus', 'Missier', 'Passaport','Jekk','Widnejn','Issib','Ħalq','Tiegħi'])
 
 # Thirty videos worth of data
 no_sequences = 30
@@ -82,27 +75,72 @@ sequence_length = 30
 # Folder start
 start_folder = 0
 
-
 model = Sequential()
-model.add(LSTM(64, return_sequences=True, activation='relu', input_shape=(30,1662)))
-model.add(LSTM(128, return_sequences=True, activation='relu'))
-model.add(LSTM(64, return_sequences=False, activation='relu'))
-model.add(Dense(64, activation='relu'))
-model.add(Dense(32, activation='relu'))
-model.add(Dense(actions.shape[0], activation='softmax'))
+model.add(Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=(30,1662)))
+model.add(MaxPooling1D(pool_size=2))
+model.add(Flatten())
+model.add(Dense(50, activation='relu'))
+model.add(Dense(len(actions), activation='softmax'))
 
-model.load_weights('model1.h5')
+try:
+    model.load_weights('MalteseSignLanguageRecognitionThesis-main\MalteseSignLanguageRecognitionThesis-main\model1.h5')
+except Exception as e:
+    print(f"An error occurred: {e}")
 #model.load_weights('model3.h5')
 
-#colors = [(245,117,16), (117,245,16), (16,117,245)]
-colors = [(245,117,16), (117,245,16), (16,117,245), (190,37,187) , (216,213,51), (230,146,39)]
+colors = [
+    (245,117,16), 
+    (117,245,16), 
+    (16,117,245), 
+    (190,37,187), 
+    (216,213,51), 
+    (230,146,39),
+    (0,128,128),    # Teal
+    (255,105,180),  # Hot Pink
+    (75,0,130),     # Indigo
+    (255,69,0),     # Orange Red
+    (154,205,50)    # Yellow Green
+]
+
+# def prob_viz(res, actions, input_frame, colors):
+#     output_frame = input_frame.copy()
+#     for num, prob in enumerate(res):
+#         print(num)
+#         cv2.rectangle(output_frame, (0,60+num*40), (int(prob*100), 90+num*40), colors[num], -1)
+#         cv2.putText(output_frame, actions[num], (0, 85+num*40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), 2, cv2.LINE_AA)
+        
+#     return output_frame
+
 
 def prob_viz(res, actions, input_frame, colors):
     output_frame = input_frame.copy()
+    # Convert OpenCV image to PIL image
+    pil_im = Image.fromarray(cv2.cvtColor(output_frame, cv2.COLOR_BGR2RGB))
+
+    draw = ImageDraw.Draw(pil_im)
+    font_path = "MalteseSignLanguageRecognitionThesis-main\MalteseSignLanguageRecognitionThesis-main\AbrilFatface-Regular.ttf"  # Replace with the path to a font that supports Maltese characters
+    font = ImageFont.truetype(font_path, 32)  # Adjust font size as needed
+
+    # Define the starting position for the rectangles and text
+    y0, dy = 60, 40
+
+    # First draw rectangles
     for num, prob in enumerate(res):
-        cv2.rectangle(output_frame, (0,60+num*40), (int(prob*100), 90+num*40), colors[num], -1)
-        cv2.putText(output_frame, actions[num], (0, 85+num*40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), 2, cv2.LINE_AA)
+        # Ensure the color index is within the bounds
+        color = colors[num % len(colors)]
         
+        # Draw rectangle (Pillow uses RGB, OpenCV uses BGR)
+        rect_start = (0, y0 + num * dy)
+        rect_end = (int(prob * 100), y0 + num * dy + 30)
+        draw.rectangle([rect_start, rect_end], fill=color[::-1])  # Reverse color for RGB
+
+    # Then draw text on top of rectangles
+    for num, action in enumerate(actions):
+        text_position = (0, y0 + num * dy)
+        draw.text(text_position, action, font=font, fill=(0, 0, 0))
+
+    # Convert PIL image back to OpenCV image
+    output_frame = cv2.cvtColor(np.array(pil_im), cv2.COLOR_RGB2BGR)
     return output_frame
 
 plt.figure(figsize=(18,18))
@@ -130,45 +168,10 @@ def translate_text(text: str, target_language_code: str) -> translate.Translatio
         parent=PARENT,
         contents=[text],
         target_language_code=target_language_code,
+        source_language_code='mt'
     )
 
     return response.translations[0]
-
-# def translateToEnglish(text):
-#     target_languages = ["en"]
-#     sentence = ' '.join(text)
-#     print(f" {sentence} ".center(50, "-"))
-#     for target_language in target_languages:
-#         translation = translate_text(sentence, target_language)
-#         source_language = translation.detected_language_code
-#         translated_text = translation.translated_text
-#         print(f"{source_language} → {target_language} : {translated_text}")
-        
-#         image = np.zeros((200, 600, 3), dtype=np.uint8)
-        
-#         # Set some properties for the text
-#         font = cv2.FONT_HERSHEY_SIMPLEX
-#         font_scale = 0.7
-#         font_color = (255, 255, 255)
-#         line_type = 2
-
-#         # Text to be displayed
-#         display_text = translated_text
-
-#         # Get the text size to center the text
-#         text_size = cv2.getTextSize(display_text, font, font_scale, line_type)[0]
-#         text_x = (image.shape[1] - text_size[0]) // 2
-#         text_y = (image.shape[0] + text_size[1]) // 2
-
-#         # Put the text on the image
-#         cv2.putText(image, display_text, (text_x, text_y), font, font_scale, font_color, line_type)
-
-#         # Display the image in a window
-#         cv2.imshow('Translation', image)
-        
-#         # Wait for any key press to close the window
-#         cv2.waitKey(0)
-
 
 def translateToEnglish(text):
     target_languages = ["en"]
@@ -189,28 +192,39 @@ def translateToEnglish(text):
         # Create an image canvas
         canvas_height = 400
         image_width = 200
-        canvas = np.zeros((canvas_height, 600, 3), dtype=np.uint8)
+        canvas = np.zeros((canvas_height, 1000, 3), dtype=np.uint8)
+        
+        # Display original text
+        original_text_size = cv2.getTextSize(sentence, font, font_scale, line_type)[0]
+        original_text_x = (canvas.shape[1] - original_text_size[0]) // 2
+        original_text_y = 50  # Display the original text at y=50 px
+        cv2.putText(canvas, sentence, (original_text_x, original_text_y), font, font_scale, font_color, line_type)
         
         # Display translated text
         display_text = translated_text
-        text_size = cv2.getTextSize(display_text, font, font_scale, line_type)[0]
-        text_x = (canvas.shape[1] - text_size[0]) // 2
-        text_y = 50  # Display the text at y=50 px
-        cv2.putText(canvas, display_text, (text_x, text_y), font, font_scale, font_color, line_type)
+        translated_text_size = cv2.getTextSize(display_text, font, font_scale, line_type)[0]
+        translated_text_x = (canvas.shape[1] - translated_text_size[0]) // 2
+        translated_text_y = original_text_y + 50  # Display the translated text below the original text
+        cv2.putText(canvas, display_text, (translated_text_x, translated_text_y), font, font_scale, font_color, line_type)
         
         images = []  # List of images
         words = text
         for word in words:
-            image_path = f"MalteseSignLanguageRecognitionThesis-main/images/{word}.jpg"  # Assuming images are named after the words
+            if (word == "Tiegħi"):
+                image_path = f"MalteseSignLanguageRecognitionThesis-main/images/Tieghi.jpg"
+            elif (word == "Ħalq"):
+                image_path = f"MalteseSignLanguageRecognitionThesis-main/images/Halq.jpg"
+            else:
+                image_path = f"MalteseSignLanguageRecognitionThesis-main/images/{word}.jpg"
             img = cv2.imread(image_path)
             if img is not None:
-                img = cv2.resize(img, (image_width, image_width))  # Resize to a fixed sizeq
+                img = cv2.resize(img, (image_width, image_width))  # Resize to a fixed size
                 images.append(img)
 
         # Positioning images
         start_x = 100  # Starting x position to draw images
         for img in images:
-            canvas[text_y + 30:text_y + 30 + image_width, start_x:start_x + image_width] = img
+            canvas[translated_text_y + 30:translated_text_y + 30 + image_width, start_x:start_x + image_width] = img
             start_x += image_width + 10  # Move to the right for the next image
 
         # Display the image in a window
@@ -218,59 +232,67 @@ def translateToEnglish(text):
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-cap = cv2.VideoCapture(0)
-# Set mediapipe model 
-with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
-    while cap.isOpened():
+try:
+    cap = cv2.VideoCapture(0)
+    # Set mediapipe model 
+    with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
+        while cap.isOpened():
+            # Read feed
+            ret, frame = cap.read()
+            if not ret:
+                print("Failed to read frame")
+                break
 
-        # Read feed
-        ret, frame = cap.read()
+            # Make detections
+            image, results = mediapipe_detection(frame, holistic)
+            if image is None or results is None:
+                print("Failed to make detections")
+                continue
+            
+            # Draw landmarks
+            draw_styled_landmarks(image, results)
+            
+            # 2. Prediction logic
+            keypoints = extract_keypoints(results)
+            if keypoints is None:
+                print("Failed to extract keypoints")
+                continue
 
-        # Make detections
-        image, results = mediapipe_detection(frame, holistic)
-        # print(results)
-        
-        # Draw landmarks
-        draw_styled_landmarks(image, results)
-        
-        # 2. Prediction logic
-        keypoints = extract_keypoints(results)
-        sequence.append(keypoints)
-        sequence = sequence[-30:]
-        
-        if len(sequence) == 30:
-            res = model.predict(np.expand_dims(sequence, axis=0))[0]
-            # print(actions[np.argmax(res)])
-            predictions.append(np.argmax(res))
+            sequence.append(keypoints)
+            sequence = sequence[-30:]
             
-            
-        #3. Viz logic
-            if np.unique(predictions[-10:])[0]==np.argmax(res): 
-                if res[np.argmax(res)] > threshold: 
-                    
-                    if len(sentence) > 0: 
-                        if actions[np.argmax(res)] != sentence[-1]:
+            if len(sequence) == 30:
+                res = model.predict(np.expand_dims(sequence, axis=0))[0]
+                predictions.append(np.argmax(res))
+
+            #3. Viz logic
+                if len(predictions) >= 10 and np.unique(predictions[-10:])[0] == np.argmax(res):
+                    if res[np.argmax(res)] > threshold:
+                        if len(sentence) > 0:
+                            if actions[np.argmax(res)] != sentence[-1]:
+                                sentence.append(actions[np.argmax(res)])
+                                translateToEnglish(sentence)
+                        else:
                             sentence.append(actions[np.argmax(res)])
                             translateToEnglish(sentence)
-                    else:
-                        sentence.append(actions[np.argmax(res)])
-                        translateToEnglish(sentence)
 
-            if len(sentence) > 5: 
-                sentence = sentence[-5:]
+                if len(sentence) > 5:
+                    sentence = sentence[-5:]
 
-            # Viz probabilities
-            image = prob_viz(res, actions, image, colors)
+                # Viz probabilities
+                image = prob_viz(res, actions, image, colors)
+                
+            cv2.rectangle(image, (0,0), (640, 40), (245, 117, 16), -1)
+            cv2.putText(image, ' '.join(sentence), (3,30), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
             
-        cv2.rectangle(image, (0,0), (640, 40), (245, 117, 16), -1)
-        cv2.putText(image, ' '.join(sentence), (3,30), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
-        
-        # Show to screen
-        cv2.imshow('OpenCV Feed', image)
+            # Show to screen
+            cv2.imshow('OpenCV Feed', image)
 
-        # Break gracefully
-        if cv2.waitKey(10) & 0xFF == ord('q'):
-            break
-    cap.release()
-    cv2.destroyAllWindows()
+            # Break gracefully
+            if cv2.waitKey(10) & 0xFF == ord('q'):
+                break
+        cap.release()
+        cv2.destroyAllWindows()
+except Exception as e:
+    print(f"An error occurred: {e}")

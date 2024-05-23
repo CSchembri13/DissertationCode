@@ -12,6 +12,8 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 from tensorflow.keras.callbacks import TensorBoard
 
+from PIL import Image, ImageDraw, ImageFont
+
 from scipy import stats
 
 mp_holistic = mp.solutions.holistic # Holistic model
@@ -104,6 +106,33 @@ def prob_viz(res, actions, input_frame, colors):
         cv2.putText(output_frame, actions[num], (0, 85+num*40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), 2, cv2.LINE_AA)
         
     return output_frame
+
+
+# def prob_viz(res, actions, input_frame, colors):
+#     output_frame = input_frame.copy()
+#     # Convert OpenCV image to PIL image
+#     pil_im = Image.fromarray(cv2.cvtColor(output_frame, cv2.COLOR_BGR2RGB))
+
+#     draw = ImageDraw.Draw(pil_im)
+#     font_path = "path/to/your/font.ttf"  # Replace with the path to a font that supports Maltese characters
+#     font = ImageFont.truetype(font_path, 32)  # Adjust font size as needed
+
+#     for num, prob in enumerate(res):
+#         # Ensure the color index is within the bounds
+#         color = colors[num % len(colors)]
+
+#         # Draw rectangle (Pillow uses RGB, OpenCV uses BGR)
+#         rect_start = (0, 60 + num * 40)
+#         rect_end = (int(prob * 100), 90 + num * 40)
+#         draw.rectangle([rect_start, rect_end], fill=color[::-1])  # Reverse color for RGB
+
+#         # Draw text
+#         text_position = (0, 85 + num * 40)
+#         draw.text(text_position, actions[num], font=font, fill=(0, 0, 0))
+
+#     # Convert PIL image back to OpenCV image
+#     output_frame = cv2.cvtColor(np.array(pil_im), cv2.COLOR_RGB2BGR)
+#     return output_frame
 
 plt.figure(figsize=(18,18))
 #plt.imshow(prob_viz(res, actions, image, colors))
