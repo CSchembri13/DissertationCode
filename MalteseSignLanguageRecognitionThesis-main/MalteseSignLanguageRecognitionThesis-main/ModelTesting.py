@@ -148,7 +148,7 @@ from os import environ
 from google.cloud import translate
 
 
-PROJECT_ID = environ.get("PROJECT_ID", "my-project-14198-1690529146451")
+PROJECT_ID = environ.get("PROJECT_ID", "InsertProjectID")
 assert PROJECT_ID
 PARENT = f"projects/{PROJECT_ID}"
 
