@@ -102,23 +102,13 @@ colors = [
     (154,205,50)    # Yellow Green
 ]
 
-# def prob_viz(res, actions, input_frame, colors):
-#     output_frame = input_frame.copy()
-#     for num, prob in enumerate(res):
-#         print(num)
-#         cv2.rectangle(output_frame, (0,60+num*40), (int(prob*100), 90+num*40), colors[num], -1)
-#         cv2.putText(output_frame, actions[num], (0, 85+num*40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), 2, cv2.LINE_AA)
-        
-#     return output_frame
-
-
 def prob_viz(res, actions, input_frame, colors):
     output_frame = input_frame.copy()
     # Convert OpenCV image to PIL image
     pil_im = Image.fromarray(cv2.cvtColor(output_frame, cv2.COLOR_BGR2RGB))
 
     draw = ImageDraw.Draw(pil_im)
-    font_path = "MalteseSignLanguageRecognitionThesis-main\MalteseSignLanguageRecognitionThesis-main\AbrilFatface-Regular.ttf"  # Replace with the path to a font that supports Maltese characters
+    font_path = "MalteseSignLanguageRecognitionThesis-main/MalteseSignLanguageRecognitionThesis-main/AbrilFatface-Regular.ttf"  # Replace with the path to a font that supports Maltese characters
     font = ImageFont.truetype(font_path, 32)  # Adjust font size as needed
 
     # Define the starting position for the rectangles and text
@@ -137,7 +127,8 @@ def prob_viz(res, actions, input_frame, colors):
     # Then draw text on top of rectangles
     for num, action in enumerate(actions):
         text_position = (0, y0 + num * dy)
-        draw.text(text_position, action, font=font, fill=(0, 0, 0))
+        percentage = f"{res[num] * 100:.2f}%"  # Format the percentage
+        draw.text(text_position, f"{action} {percentage}", font=font, fill=(0, 0, 0))
 
     # Convert PIL image back to OpenCV image
     output_frame = cv2.cvtColor(np.array(pil_im), cv2.COLOR_RGB2BGR)
@@ -183,37 +174,38 @@ def translateToEnglish(text):
         translated_text = translation.translated_text
         print(f"{source_language} → {target_language} : {translated_text}")
 
-        # Set properties for the text
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.7
-        font_color = (255, 255, 255)
-        line_type = 2
-        
         # Create an image canvas
         canvas_height = 400
         image_width = 200
         canvas = np.zeros((canvas_height, 1000, 3), dtype=np.uint8)
         
+        # Convert the canvas to a PIL image
+        pil_im = Image.fromarray(canvas)
+        draw = ImageDraw.Draw(pil_im)
+        
+        # Load the specific font
+        font_path = "MalteseSignLanguageRecognitionThesis-main/MalteseSignLanguageRecognitionThesis-main/AbrilFatface-Regular.ttf"
+        font = ImageFont.truetype(font_path, 32)
+        
         # Display original text
-        original_text_size = cv2.getTextSize(sentence, font, font_scale, line_type)[0]
-        original_text_x = (canvas.shape[1] - original_text_size[0]) // 2
+        original_text_bbox = draw.textbbox((0, 0), sentence, font=font)
+        original_text_x = (canvas.shape[1] - (original_text_bbox[2] - original_text_bbox[0])) // 2
         original_text_y = 50  # Display the original text at y=50 px
-        cv2.putText(canvas, sentence, (original_text_x, original_text_y), font, font_scale, font_color, line_type)
+        draw.text((original_text_x, original_text_y), sentence, font=font, fill=(255, 255, 255))
         
         # Display translated text
-        display_text = translated_text
-        translated_text_size = cv2.getTextSize(display_text, font, font_scale, line_type)[0]
-        translated_text_x = (canvas.shape[1] - translated_text_size[0]) // 2
+        translated_text_bbox = draw.textbbox((0, 0), translated_text, font=font)
+        translated_text_x = (canvas.shape[1] - (translated_text_bbox[2] - translated_text_bbox[0])) // 2
         translated_text_y = original_text_y + 50  # Display the translated text below the original text
-        cv2.putText(canvas, display_text, (translated_text_x, translated_text_y), font, font_scale, font_color, line_type)
+        draw.text((translated_text_x, translated_text_y), translated_text, font=font, fill=(255, 255, 255))
         
         images = []  # List of images
         words = text
         for word in words:
-            if (word == "Tiegħi"):
-                image_path = f"MalteseSignLanguageRecognitionThesis-main/images/Tieghi.jpg"
-            elif (word == "Ħalq"):
-                image_path = f"MalteseSignLanguageRecognitionThesis-main/images/Halq.jpg"
+            if word == "Tiegħi":
+                image_path = "MalteseSignLanguageRecognitionThesis-main/images/Tieghi.jpg"
+            elif word == "Ħalq":
+                image_path = "MalteseSignLanguageRecognitionThesis-main/images/Halq.jpg"
             else:
                 image_path = f"MalteseSignLanguageRecognitionThesis-main/images/{word}.jpg"
             img = cv2.imread(image_path)
@@ -224,13 +216,17 @@ def translateToEnglish(text):
         # Positioning images
         start_x = 100  # Starting x position to draw images
         for img in images:
-            canvas[translated_text_y + 30:translated_text_y + 30 + image_width, start_x:start_x + image_width] = img
+            pil_im.paste(Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB)), (start_x, translated_text_y + 30))
             start_x += image_width + 10  # Move to the right for the next image
 
+        # Convert the PIL image back to OpenCV image
+        canvas = cv2.cvtColor(np.array(pil_im), cv2.COLOR_RGB2BGR)
+        
         # Display the image in a window
         cv2.imshow('Translation and Images', canvas)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+        
 
 try:
     cap = cv2.VideoCapture(0)

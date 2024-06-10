@@ -13,7 +13,7 @@ from tensorflow.keras.layers import LSTM, Dense
 from tensorflow.keras.callbacks import TensorBoard
 
 from PIL import Image, ImageDraw, ImageFont
-
+ 
 from scipy import stats
 
 mp_holistic = mp.solutions.holistic # Holistic model
